@@ -6,7 +6,7 @@ const multer = require("multer");
 const db = require("./database");
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 const ADMIN_PASSWORD = "TIGER2006";
 
 app.use(cors());
@@ -111,7 +111,9 @@ app.post("/api/admin/products", upload.single("image"), (req, res) => {
       return res.status(400).json({ error: "Champs manquants" });
     }
 
-    const imageUrl = req.file ? `http://localhost:${PORT}/uploads/${req.file.filename}` : "";
+    const imageUrl = req.file
+      ? `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`
+      : "";
 
     const result = db.prepare(`
       INSERT INTO products (title, subtitle, price, image_url, hidden_content, visible)
@@ -147,6 +149,6 @@ app.delete("/api/admin/products/:id", (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log("API lancée sur http://localhost:" + PORT);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("API lancée sur le port " + PORT);
 });
