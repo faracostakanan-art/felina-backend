@@ -2,6 +2,7 @@
   "name": "telegram-shop",
   "version": "1.0.0",
   "scripts": {
+    "start": "node server.js",
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview"
@@ -10,7 +11,6 @@
     "better-sqlite3": "^12.6.2",
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "install": "^0.13.0",
     "multer": "^2.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
