@@ -1,21 +1,13 @@
 {
-  "name": "telegram-shop",
+  "name": "telegram-shop-backend",
   "version": "1.0.0",
   "scripts": {
-    "start": "node server.js",
-    "dev": "vite",
-    "build": "vite build",
-    "serve": "vite preview"
+    "start": "node server.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.6.2",
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "multer": "^2.1.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
-  "devDependencies": {
-    "vite": "^5.4.21"
+    "multer": "^2.1.1"
   }
 }
