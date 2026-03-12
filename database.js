@@ -1,6 +1,6 @@
 const Database = require("better-sqlite3");
 
-const db = new Database("shop.sqlite");
+const db = new Database(__dirname + "/shop.sqlite");
 
 db.prepare(`
 CREATE TABLE IF NOT EXISTS users (
