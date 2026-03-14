@@ -35,10 +35,10 @@ function createUserIfNotExists(userId, username = "") {
 
   if (!existing) {
     db.prepare("INSERT INTO users (id, username, balance) VALUES (?, ?, ?)")
-      .run(userId, username, 0);
+      .run(String(userId), username, 0);
   }
 
-  return db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
+  return db.prepare("SELECT * FROM users WHERE id = ?").get(String(userId));
 }
 
 app.get("/api/user/:userId", (req, res) => {
@@ -63,12 +63,12 @@ app.post("/api/admin/add-balance", (req, res) => {
       return res.status(400).json({ error: "Champs manquants ou invalides" });
     }
 
-    createUserIfNotExists(user_id);
+    createUserIfNotExists(String(user_id));
 
     db.prepare("UPDATE users SET balance = balance + ? WHERE id = ?")
-      .run(Number(amount), user_id);
+      .run(Number(amount), String(user_id));
 
-    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(user_id);
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(String(user_id));
     res.json({ success: true, user });
   } catch (error) {
     console.error(error);
@@ -143,6 +143,117 @@ app.delete("/api/admin/products/:id", (req, res) => {
 
     db.prepare("DELETE FROM products WHERE id = ?").run(req.params.id);
     res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.post("/api/checkout", (req, res) => {
+  try {
+    const { user_id, product_id } = req.body;
+
+    if (!user_id || !product_id) {
+      return res.status(400).json({ error: "Champs manquants" });
+    }
+
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(String(user_id));
+    const product = db.prepare("SELECT * FROM products WHERE id = ? AND visible = 1").get(product_id);
+
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur introuvable" });
+    }
+
+    if (!product) {
+      return res.status(404).json({ error: "Produit introuvable" });
+    }
+
+    if (Number(user.balance) < Number(product.price)) {
+      return res.status(400).json({ error: "Solde insuffisant" });
+    }
+
+    const insertOrder = db.prepare(`
+      INSERT INTO orders (user_id, status)
+      VALUES (?, ?)
+    `).run(String(user_id), "COMPLETED");
+
+    const orderId = insertOrder.lastInsertRowid;
+
+    db.prepare(`
+      INSERT INTO order_items (
+        order_id,
+        product_id,
+        title,
+        subtitle,
+        price,
+        image_url,
+        hidden_content
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      orderId,
+      product.id,
+      product.title,
+      product.subtitle || "",
+      Number(product.price),
+      product.image_url || "",
+      product.hidden_content || ""
+    );
+
+    db.prepare("UPDATE users SET balance = balance - ? WHERE id = ?")
+      .run(Number(product.price), String(user_id));
+
+    db.prepare("DELETE FROM products WHERE id = ?").run(product.id);
+
+    const updatedUser = db.prepare("SELECT * FROM users WHERE id = ?").get(String(user_id));
+
+    res.json({
+      success: true,
+      balance: Number(updatedUser.balance),
+      order_id: orderId
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.get("/api/orders/:userId", (req, res) => {
+  try {
+    const orders = db.prepare(`
+      SELECT * FROM orders
+      WHERE user_id = ?
+      ORDER BY id DESC
+    `).all(String(req.params.userId));
+
+    res.json(orders);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.get("/api/orders/:userId/:orderId", (req, res) => {
+  try {
+    const order = db.prepare(`
+      SELECT * FROM orders
+      WHERE id = ? AND user_id = ?
+    `).get(req.params.orderId, String(req.params.userId));
+
+    if (!order) {
+      return res.status(404).json({ error: "Commande introuvable" });
+    }
+
+    const items = db.prepare(`
+      SELECT * FROM order_items
+      WHERE order_id = ?
+      ORDER BY id DESC
+    `).all(order.id);
+
+    res.json({
+      ...order,
+      items
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erreur serveur" });
