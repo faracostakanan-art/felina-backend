@@ -492,10 +492,6 @@ app.post("/api/payments/webhook", (req, res) => {
       return res.json({ success: true, message: "Déjà traité" });
     }
 
-    if (deposit.transaction_id && deposit.transaction_id === String(transaction_id)) {
-      return res.json({ success: true, message: "Transaction déjà traitée" });
-    }
-
     if (String(currency).toUpperCase() !== String(deposit.currency).toUpperCase()) {
       return res.status(400).json({ error: "Devise invalide" });
     }
